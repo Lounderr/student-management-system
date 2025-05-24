@@ -1,17 +1,19 @@
-package uniapp.gui;
+package view;
 
 import javax.swing.*;
 
-import uniapp.model.Major;
-import uniapp.model.Student;
-import uniapp.tablemodel.*;
+import data.model.*;
+import data.model.repository.impl.*;
+import tablemodel.*;
 import utility.TableOperations;
 
 import java.util.List;
 
 public class MajorsFrame extends JDialog {
     private final MajorsTableModel majorsTableModel;
-    private final List<Major> majors;
+    private final MajorsRepository majorsRepository;
+    private final StudentsRepository studentsRepository;
+    private final GradesRepository gradesRepository;
     private JPanel contentPane;
     private JTable majorsTable;
     private JTextField majorField;
@@ -20,15 +22,15 @@ public class MajorsFrame extends JDialog {
     private JButton subjectsBtn;
     private JButton removeBtn;
     private JButton doneBtn;
-    private List<Student> students;
 
-    public MajorsFrame(MainFrame owner, List<Major> majors, List<Student> students) {
-        this.majors = majors;
-        this.students = students;
+    public MajorsFrame(MainFrame owner, MajorsRepository majorsRepository, StudentsRepository studentsRepository, GradesRepository gradesRepository) {
+        this.majorsRepository = majorsRepository;
+        this.studentsRepository = studentsRepository;
+        this.gradesRepository = gradesRepository;
 
         StudentsTableModel studentsTableModel = (StudentsTableModel)owner.studentsTable.getModel();
 
-        majorsTableModel = new MajorsTableModel(studentsTableModel, majors, students);
+        majorsTableModel = new MajorsTableModel(studentsTableModel, majorsRepository.All(), studentsRepository.All());
         majorsTable.setModel(majorsTableModel);
 
         TableOperations.createStandardRowSorter(majorsTable);
@@ -52,11 +54,14 @@ public class MajorsFrame extends JDialog {
             int totalYears = (Integer) yearsSpinner.getValue();
 
             try {
-                Major major = new Major(majorName, totalYears);
-                majorsTableModel.addMajor(major);
-
-                majorField.setText("");
-                yearsSpinner.setValue(1);
+                Major major = new Major(0, majorName, totalYears);
+                if (majorsRepository.Add(major)) {
+                    majorsTableModel.addMajor(major);
+                    majorField.setText("");
+                    yearsSpinner.setValue(1);
+                } else {
+                    JOptionPane.showMessageDialog(null, "Failed to add major to database", "Error", JOptionPane.ERROR_MESSAGE);
+                }
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -67,7 +72,12 @@ public class MajorsFrame extends JDialog {
 
             if (majorsTable.getSelectedRow() >= 0) {
                 int modelRow = majorsTable.convertRowIndexToModel(selectedRow);
-                majorsTableModel.removeMajor(modelRow);
+                Major majorToRemove = majorsRepository.All().get(modelRow);
+                if (majorsRepository.Delete(majorToRemove.getId())) {
+                    majorsTableModel.removeMajor(modelRow);
+                } else {
+                    JOptionPane.showMessageDialog(null, "Failed to remove major from database", "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
 
@@ -76,11 +86,9 @@ public class MajorsFrame extends JDialog {
 
             if (majorsTable.getSelectedRow() >= 0) {
                 int modelRow = majorsTable.convertRowIndexToModel(selectedRow);
-
-                new SubjectsFrame(this, majors.get(modelRow), students);
+                new SubjectsFrame(this, majorsRepository.All().get(modelRow), studentsRepository.All(), majorsRepository, gradesRepository);
             }
         });
-
 
         doneBtn.addActionListener((e) -> dispose());
     }

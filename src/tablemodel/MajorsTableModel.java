@@ -1,7 +1,6 @@
-package uniapp.tablemodel;
+package tablemodel;
 
-import uniapp.model.Major;
-import uniapp.model.Student;
+import data.model.*;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;

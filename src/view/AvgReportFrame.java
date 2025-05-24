@@ -1,6 +1,7 @@
-package uniapp.gui;
+package view;
 
-import uniapp.model.*;
+import data.model.*;
+import data.model.repository.impl.*;
 
 import javax.swing.*;
 import java.awt.Component;
@@ -8,17 +9,19 @@ import java.util.List;
 import java.util.OptionalDouble;
 
 public class AvgReportFrame extends JDialog {
-    private final List<Major> majors;
-    private final List<Student> students;
+    private final MajorsRepository majorsRepository;
+    private final StudentsRepository studentsRepository;
+    private final GradesRepository gradesRepository;
     private JPanel contentPane;
     private JButton doneBtn;
     private JComboBox<Major> majorsComboBox;
     private JButton calculateBtn;
     private JComboBox<Integer> yearComboBox;
 
-    public AvgReportFrame(Component owner, List<Major> majors, List<Student> students) {
-        this.majors = majors;
-        this.students = students;
+    public AvgReportFrame(Component owner, MajorsRepository majorsRepository, StudentsRepository studentsRepository, GradesRepository gradesRepository) {
+        this.majorsRepository = majorsRepository;
+        this.studentsRepository = studentsRepository;
+        this.gradesRepository = gradesRepository;
         initComboBoxes();
         addFrameEventListeners();
 
@@ -31,7 +34,7 @@ public class AvgReportFrame extends JDialog {
     }
 
     private void initComboBoxes() {
-        for (var major : majors) {
+        for (var major : majorsRepository.All()) {
             majorsComboBox.addItem(major);
         }
         majorsComboBox.setSelectedItem(null);
@@ -70,12 +73,15 @@ public class AvgReportFrame extends JDialog {
     }
 
     private OptionalDouble getAverage() {
-        var filteredStudents = students.stream()
+        var filteredStudents = studentsRepository.All().stream()
                 .filter(s ->
                         s.getMajor() == majorsComboBox.getSelectedItem()
                                 && s.getYear() == (Integer) yearComboBox.getSelectedItem()
                 ).toList();
 
-        return filteredStudents.stream().flatMap(student -> student.getGrades().stream()).mapToDouble(Grade::getGrade).average();
+        return gradesRepository.All().stream()
+                .filter(g -> filteredStudents.stream().anyMatch(s -> s.getFacultyNumber().equals(g.getStudentId())))
+                .mapToDouble(Grade::getGrade)
+                .average();
     }
 }

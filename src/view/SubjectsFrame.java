@@ -1,10 +1,8 @@
-package uniapp.gui;
+package view;
 
-
-import uniapp.model.Major;
-import uniapp.model.Student;
-import uniapp.model.Subject;
-import uniapp.tablemodel.SubjectsTableModel;
+import data.model.*;
+import data.model.repository.impl.*;
+import tablemodel.*;
 import utility.TableOperations;
 
 import javax.swing.*;
@@ -19,9 +17,13 @@ public class SubjectsFrame extends JDialog {
     private JButton addBtn;
     private JButton removeBtn;
     private final SubjectsTableModel subjectsTableModel;
+    private final MajorsRepository majorsRepository;
+    private final GradesRepository gradesRepository;
 
-    public SubjectsFrame(Component owner, Major major, List<Student> students) {
-        subjectsTableModel = new SubjectsTableModel(major, students);
+    public SubjectsFrame(Component owner, Major major, List<Student> students, MajorsRepository majorsRepository, GradesRepository gradesRepository) {
+        this.majorsRepository = majorsRepository;
+        this.gradesRepository = gradesRepository;
+        subjectsTableModel = new SubjectsTableModel(major, students, majorsRepository, gradesRepository);
         subjectsTable.setModel(subjectsTableModel);
 
         TableOperations.createStandardRowSorter(subjectsTable);
@@ -44,7 +46,7 @@ public class SubjectsFrame extends JDialog {
             String subjectName = subjectField.getText();
 
             try {
-                Subject subject = new Subject(subjectName);
+                Subject subject = new Subject(0, subjectName);
                 subjectsTableModel.addSubject(subject);
                 subjectField.setText("");
             } catch (Exception ex) {

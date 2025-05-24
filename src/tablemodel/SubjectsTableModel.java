@@ -1,9 +1,7 @@
-package uniapp.tablemodel;
+package tablemodel;
 
-import uniapp.model.Grade;
-import uniapp.model.Major;
-import uniapp.model.Student;
-import uniapp.model.Subject;
+import data.model.*;
+import data.model.repository.impl.*;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
@@ -15,14 +13,18 @@ public class SubjectsTableModel extends AbstractTableModel {
     private final List<Subject> subjects;
     private final List<Student> students;
     private final Major major;
+    private final MajorsRepository majorsRepository;
+    private final GradesRepository gradesRepository;
 
     private final String[] columnNames = {
             "Предмет",
     };
 
-    public SubjectsTableModel(Major major, List<Student> students) {
+    public SubjectsTableModel(Major major, List<Student> students, MajorsRepository majorsRepository, GradesRepository gradesRepository) {
         this.major = major;
-        this.subjects = major.getSubjects();
+        this.majorsRepository = majorsRepository;
+        this.gradesRepository = gradesRepository;
+        this.subjects = majorsRepository.GetSubjectsForMajor(major.getId());
         this.students = students;
     }
 
@@ -74,26 +76,23 @@ public class SubjectsTableModel extends AbstractTableModel {
     }
 
     public void removeSubject(int row) {
-        // SQL REMOVE
-
         int confirmation = JOptionPane.showConfirmDialog(null,
                 "Are you sure you want to delete this subject?\n" +
                         "Deleting this subject will also delete all related grades.",
                 "Confirmation", JOptionPane.OK_CANCEL_OPTION);
 
-        if (confirmation == JOptionPane.OK_OPTION)
-        {
-            // ON SUBJECT DELETE, DELETE GRADES
+        if (confirmation == JOptionPane.OK_OPTION) {
             var subject = subjects.get(row);
             for (Student student : students) {
-                List<Grade> grades = student.getGrades();
-
-                for (int i = 0; i < grades.size(); i++) {
-                    if (grades.get(i).getSubject() == subject && student.getMajor() == this.major)
-                        grades.remove(grades.get(i));
+                if (student.getMajor() == this.major) {
+                    var grades = gradesRepository.AllByStudentId(student.getId());
+                    for (var grade : grades) {
+                        if (grade.getSubjectId() == subject.getId()) {
+                            gradesRepository.Delete(grade.getId());
+                        }
+                    }
                 }
             }
-
             subjects.remove(row);
             fireTableRowsDeleted(row, row);
         }

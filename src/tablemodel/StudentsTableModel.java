@@ -1,7 +1,6 @@
-package uniapp.tablemodel;
+package tablemodel;
 
-import uniapp.model.Major;
-import uniapp.model.Student;
+import data.model.*;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
@@ -9,7 +8,7 @@ import java.util.List;
 
 public class StudentsTableModel extends AbstractTableModel {
     private final List<Major> majors;
-    private final List<Student> students;
+    private List<Student> students;
 
     private final String[] columnNames = {
             "Факултетен номер",
@@ -121,5 +120,10 @@ public class StudentsTableModel extends AbstractTableModel {
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    public void setStudents(List<Student> students) {
+        this.students = students;
+        fireTableDataChanged();
     }
 }

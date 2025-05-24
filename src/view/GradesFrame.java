@@ -1,14 +1,12 @@
-package uniapp.gui;
+package view;
 
-
-import uniapp.model.Grade;
-import uniapp.model.Student;
-import uniapp.model.Subject;
-import uniapp.tablemodel.GradesTableModel;
+import data.model.*;
+import data.model.repository.impl.*;
+import tablemodel.*;
 import utility.TableOperations;
 
 import javax.swing.*;
-import java.awt.*;
+import java.awt.Component;
 import java.util.List;
 
 public class GradesFrame extends JDialog {
@@ -21,19 +19,23 @@ public class GradesFrame extends JDialog {
     private ButtonGroup gradeBtnGroup;
 
     private final Student student;
-    private final List<Grade> grades;
+    private final GradesRepository gradesRepository;
+    private final SubjectsRepository subjectsRepository;
+    private final MajorsRepository majorsRepository;
     private GradesTableModel gradesTableModel;
 
-    public GradesFrame(Component owner, Student student) {
+    public GradesFrame(Component owner, Student student, GradesRepository gradesRepository, SubjectsRepository subjectsRepository, MajorsRepository majorsRepository) {
         this.student = student;
-        this.grades = student.getGrades();
+        this.gradesRepository = gradesRepository;
+        this.subjectsRepository = subjectsRepository;
+        this.majorsRepository = majorsRepository;
 
-        gradesTableModel = new GradesTableModel(student);
+        gradesTableModel = new GradesTableModel(student, gradesRepository, subjectsRepository);
         gradesTable.setModel(gradesTableModel);
 
         initAddGradeComboBox();
 
-        TableOperations.createInlineTableComboBox(gradesTable, 0, student.getMajor().getSubjects());
+        TableOperations.createInlineTableComboBox(gradesTable, 0, majorsRepository.GetSubjectsForMajor(student.getMajor().getId()));
         TableOperations.createStandardRowSorter(gradesTable);
         TableOperations.centerColumnClass(gradesTable, Integer.class);
 
@@ -48,7 +50,7 @@ public class GradesFrame extends JDialog {
     }
 
     private void initAddGradeComboBox() {
-        for (var subject : student.getMajor().getSubjects()) {
+        for (var subject : majorsRepository.GetSubjectsForMajor(student.getMajor().getId())) {
             subjectComboBox.addItem(subject);
         }
         subjectComboBox.setSelectedItem(null);
@@ -61,13 +63,14 @@ public class GradesFrame extends JDialog {
             int selectedGrade = Integer.parseInt(gradeBtnGroup.getSelection().getActionCommand());
 
             try {
-                Grade grade = new Grade(subject, selectedGrade);
-                gradesTableModel.addGrade(grade);
+                Grade grade = new Grade(0, subject.getId(), student.getId(), selectedGrade);
+                gradesRepository.Add(grade);
+                gradesTableModel.refreshGrades();
 
                 subjectComboBox.setSelectedItem(null);
                 gradeBtnGroup.clearSelection();
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
 
@@ -76,8 +79,9 @@ public class GradesFrame extends JDialog {
 
             if (selectedRow >= 0) {
                 var modelRow = gradesTable.convertRowIndexToModel(selectedRow);
-
-                gradesTableModel.removeGrade(modelRow);
+                var grade = gradesTableModel.getGrade(modelRow);
+                gradesRepository.Delete(grade.getId());
+                gradesTableModel.refreshGrades();
             }
         });
 

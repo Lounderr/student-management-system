@@ -1,13 +1,15 @@
 package tablemodel;
 
 import data.model.*;
+import data.model.repository.impl.*;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import java.util.List;
 
 public class StudentsTableModel extends AbstractTableModel {
-    private final List<Major> majors;
+    private final StudentsRepository studentsRepository;
+    private final MajorsRepository majorsRepository;
     private List<Student> students;
 
     private final String[] columnNames = {
@@ -17,9 +19,15 @@ public class StudentsTableModel extends AbstractTableModel {
             "Курс"
     };
 
-    public StudentsTableModel(List<Major> majors, List<Student> students) {
-        this.majors = majors;
-        this.students = students;
+    public StudentsTableModel(StudentsRepository studentsRepository, MajorsRepository majorsRepository) {
+        this.studentsRepository = studentsRepository;
+        this.majorsRepository = majorsRepository;
+        refreshStudents();
+    }
+
+    public void refreshStudents() {
+        this.students = studentsRepository.All();
+        fireTableDataChanged();
     }
 
     @Override
@@ -55,11 +63,10 @@ public class StudentsTableModel extends AbstractTableModel {
     }
 
     public Object getValueAt(int rowIndex, int columnIndex) {
-        // SQL SELECT
         Student student = getStudent(rowIndex);
 
         return switch (columnIndex) {
-            case 0 -> student.getId();
+            case 0 -> student.getFacultyNumber();
             case 1 -> student.getFullName();
             case 2 -> student.getMajor();
             case 3 -> student.getYear();
@@ -69,24 +76,21 @@ public class StudentsTableModel extends AbstractTableModel {
 
     @Override
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
-        // SQL UPDATE
         Student student = getStudent(rowIndex);
 
         try {
             switch (columnIndex) {
                 case 1 -> student.setFullName((String) value);
-                case 2 -> {
-//                    if (majors.contains((Major) value)) {
-//                        students.get(rowIndex).setMajor((Major)value);
-//                    } else
-//                        throw new IllegalStateException("Major does not exist");
-                    students.get(rowIndex).setMajor((Major)value);
-                }
+                case 2 -> student.setMajor((Major)value);
                 case 3 -> student.setYear((Integer) value);
                 default -> throw new IllegalStateException("Unexpected value: " + columnIndex);
             }
 
-            fireTableCellUpdated(rowIndex, columnIndex);
+            if (studentsRepository.Update(student)) {
+                fireTableCellUpdated(rowIndex, columnIndex);
+            } else {
+                JOptionPane.showMessageDialog(null, "Failed to update student in database", "Error", JOptionPane.ERROR_MESSAGE);
+            }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -97,33 +101,19 @@ public class StudentsTableModel extends AbstractTableModel {
     }
 
     public void addStudent(Student student) {
-        insertStudent(getRowCount(), student);
-    }
-
-    public void removeStudent(int row) {
-        // SQL REMOVE
-        students.remove(row);
-        fireTableRowsDeleted(row, row);
-    }
-
-    public void insertStudent(int row, Student student) {
-        // SQL ADD
-        try {
-            // Can be improved by transforming to a dictionary
-            boolean isStudentNameUnique = students.stream().map(Student::getId).noneMatch(id -> id.equals(student.getId()));
-            if (isStudentNameUnique) {
-                students.add(row, student);
-                fireTableRowsInserted(row, row);
-            } else
-                throw new Exception("Student ID is already in use");
-
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        if (studentsRepository.Add(student)) {
+            refreshStudents();
+        } else {
+            JOptionPane.showMessageDialog(null, "Failed to add student to database", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    public void setStudents(List<Student> students) {
-        this.students = students;
-        fireTableDataChanged();
+    public void removeStudent(int row) {
+        Student student = getStudent(row);
+        if (studentsRepository.Delete(student.getId())) {
+            refreshStudents();
+        } else {
+            JOptionPane.showMessageDialog(null, "Failed to delete student from database", "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 }

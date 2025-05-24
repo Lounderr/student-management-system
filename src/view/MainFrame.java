@@ -40,7 +40,7 @@ public class MainFrame extends JFrame {
         this.gradesRepository = gradesRepository;
         this.subjectsRepository = subjectsRepository;
 
-        studentsTableModel = new StudentsTableModel(majorsRepository.All(), studentsRepository.All());
+        studentsTableModel = new StudentsTableModel(studentsRepository, majorsRepository);
         studentsTable.setModel(studentsTableModel);
 
         TableOperations.createStandardRowSorter(studentsTable);
@@ -113,16 +113,11 @@ public class MainFrame extends JFrame {
 
             try {
                 Student student = new Student(0, id, name, major, year);
-                if (studentsRepository.Add(student)) {
-                    studentsTableModel.addStudent(student);
-
-                    studentNameField.setText("");
-                    studentIdField.setText("");
-                    studentMajorComboBox.setSelectedItem(null);
-                    studentYearComboBox.setSelectedItem(null);
-                } else {
-                    JOptionPane.showMessageDialog(null, "Failed to add student to database", "Error", JOptionPane.ERROR_MESSAGE);
-                }
+                studentsTableModel.addStudent(student);
+                studentNameField.setText("");
+                studentIdField.setText("");
+                studentMajorComboBox.setSelectedItem(null);
+                studentYearComboBox.setSelectedItem(null);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -143,7 +138,7 @@ public class MainFrame extends JFrame {
             if (result == JOptionPane.YES_OPTION) {
                 try {
                     studentsRepository.Delete(student.getId());
-                    studentsTableModel.setStudents(studentsRepository.All());
+                    studentsTableModel.refreshStudents();
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(this, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 }

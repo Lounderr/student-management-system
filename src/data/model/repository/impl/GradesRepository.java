@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalDouble;
 
 public class GradesRepository implements IRepository<Grade> {
     private final Connection connection;
@@ -117,5 +118,26 @@ public class GradesRepository implements IRepository<Grade> {
         }
 
         return true;
+    }
+
+    public OptionalDouble getAverageForMajorAndYear(int majorId, int year) {
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(
+                "SELECT AVG(g.grade) as average " +
+                "FROM Grade g " +
+                "JOIN Student s ON g.student_id = s.id " +
+                "WHERE s.major_id = ? AND s.year = ?"
+            );
+            preparedStatement.setInt(1, majorId);
+            preparedStatement.setInt(2, year);
+            var resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                double avg = resultSet.getDouble("average");
+                return resultSet.wasNull() ? OptionalDouble.empty() : OptionalDouble.of(avg);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return OptionalDouble.empty();
     }
 }

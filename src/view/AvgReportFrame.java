@@ -73,15 +73,13 @@ public class AvgReportFrame extends JDialog {
     }
 
     private OptionalDouble getAverage() {
-        var filteredStudents = studentsRepository.All().stream()
-                .filter(s ->
-                        s.getMajor() == majorsComboBox.getSelectedItem()
-                                && s.getYear() == (Integer) yearComboBox.getSelectedItem()
-                ).toList();
-
-        return gradesRepository.All().stream()
-                .filter(g -> filteredStudents.stream().anyMatch(s -> s.getFacultyNumber().equals(g.getStudentId())))
-                .mapToDouble(Grade::getGrade)
-                .average();
+        Major selectedMajor = (Major) majorsComboBox.getSelectedItem();
+        Integer selectedYear = (Integer) yearComboBox.getSelectedItem();
+        
+        if (selectedMajor == null || selectedYear == null) {
+            return OptionalDouble.empty();
+        }
+        
+        return gradesRepository.getAverageForMajorAndYear(selectedMajor.getId(), selectedYear);
     }
 }

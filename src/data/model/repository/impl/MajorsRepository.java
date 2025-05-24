@@ -17,6 +17,10 @@ public class MajorsRepository implements IRepository<Major> {
         this.subjectsRepository = new SubjectsRepository(connection);
     }
 
+    public Connection getConnection() {
+        return connection;
+    }
+
     public List<Major> All() {
         List<Major> majors = new ArrayList<>();
         try {

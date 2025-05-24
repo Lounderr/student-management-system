@@ -1,26 +1,33 @@
 package tablemodel;
 
 import data.model.*;
+import data.model.repository.impl.*;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import java.util.List;
 
-
 public class MajorsTableModel extends AbstractTableModel {
     private final StudentsTableModel studentsTableModel;
-    private final List<Major> majors;
-    private final List<Student> students;
+    private final MajorsRepository majorsRepository;
+    private final StudentsRepository studentsRepository;
+    private List<Major> majors;
 
     private final String[] columnNames = {
             "Специалност",
             "Години на следване",
     };
 
-    public MajorsTableModel(StudentsTableModel studentsTableModel, List<Major> majors, List<Student> students) {
+    public MajorsTableModel(StudentsTableModel studentsTableModel, MajorsRepository majorsRepository, StudentsRepository studentsRepository) {
         this.studentsTableModel = studentsTableModel;
-        this.majors = majors;
-        this.students = students;
+        this.majorsRepository = majorsRepository;
+        this.studentsRepository = studentsRepository;
+        refreshMajors();
+    }
+
+    public void refreshMajors() {
+        this.majors = majorsRepository.All();
+        fireTableDataChanged();
     }
 
     @Override
@@ -54,7 +61,6 @@ public class MajorsTableModel extends AbstractTableModel {
 
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
-        // SQL SELECT
         Major major = getMajor(rowIndex);
 
         return switch (columnIndex) {
@@ -66,26 +72,27 @@ public class MajorsTableModel extends AbstractTableModel {
 
     @Override
     public void setValueAt(Object value, int rowIndex, int columnIndex) {
-        // SQL UPDATE
         Major major = getMajor(rowIndex);
 
         try {
             switch (columnIndex) {
                 case 0:
                     major.setName((String) value);
-                    // WHEN A VALUE IS SET, YOU MUST CHANGE THE VALUES FOR STUDENTS TABLE MODEL TOO
-                    studentsTableModel.fireTableDataChanged();
-
                     break;
                 case 1: {
-                    major.setTotalYears(Integer.parseInt((String) value));
+                    major.setTotalYears((Integer) value);
                     break;
                 }
                 default:
                     throw new IndexOutOfBoundsException();
             }
 
-            fireTableCellUpdated(rowIndex, columnIndex);
+            if (majorsRepository.Update(major)) {
+                fireTableCellUpdated(rowIndex, columnIndex);
+                studentsTableModel.refreshStudents();
+            } else {
+                JOptionPane.showMessageDialog(null, "Failed to update major in database", "Error", JOptionPane.ERROR_MESSAGE);
+            }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -96,16 +103,23 @@ public class MajorsTableModel extends AbstractTableModel {
     }
 
     public void addMajor(Major major) {
-        insertMajor(getRowCount(), major);
+        if (majorsRepository.Add(major)) {
+            refreshMajors();
+        } else {
+            JOptionPane.showMessageDialog(null, "Failed to add major to database", "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     public void removeMajor(int row) {
-        // SQL REMOVE
-        var majorToRemove = majors.get(row);
-
-        if (students.stream().noneMatch(s -> s.getMajor() == majorToRemove)) {
-            majors.remove(row);
-            fireTableRowsUpdated(row, row);
+        Major majorToRemove = getMajor(row);
+        List<Student> students = studentsRepository.All();
+        
+        if (students.stream().noneMatch(s -> s.getMajor().getId() == majorToRemove.getId())) {
+            if (majorsRepository.Delete(majorToRemove.getId())) {
+                refreshMajors();
+            } else {
+                JOptionPane.showMessageDialog(null, "Failed to delete major from database", "Error", JOptionPane.ERROR_MESSAGE);
+            }
         } else {
             JOptionPane.showMessageDialog(null,
                     "Cannot remove major - already in use by students.\n" +
@@ -115,21 +129,4 @@ public class MajorsTableModel extends AbstractTableModel {
             );
         }
     }
-
-    public void insertMajor(int row, Major major) {
-        // SQL ADD
-        try {
-            // Can be improved by transforming majors into a dictionary
-            boolean isMajorNameUnique = majors.stream().map(Major::getName).noneMatch(n -> n.equalsIgnoreCase(major.getName()));
-            if (isMajorNameUnique) {
-                majors.add(row, major);
-                fireTableRowsInserted(row, row);
-            } else
-                throw new Exception("Major already exists");
-
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
 }

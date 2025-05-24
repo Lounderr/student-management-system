@@ -16,6 +16,13 @@ public class Main {
         var mainFrame = new MainFrame(majorsRepository, studentsRepository, gradesRepository, subjectsRepository);
         mainFrame.setVisible(true);
 
-        Database.close();
+        // Add window listener to close database connection when application closes
+        mainFrame.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+                Database.close();
+                System.exit(0);
+            }
+        });
     }
 }

@@ -30,7 +30,7 @@ public class MajorsFrame extends JDialog {
 
         StudentsTableModel studentsTableModel = (StudentsTableModel)owner.studentsTable.getModel();
 
-        majorsTableModel = new MajorsTableModel(studentsTableModel, majorsRepository.All(), studentsRepository.All());
+        majorsTableModel = new MajorsTableModel(studentsTableModel, majorsRepository, studentsRepository);
         majorsTable.setModel(majorsTableModel);
 
         TableOperations.createStandardRowSorter(majorsTable);
@@ -55,13 +55,9 @@ public class MajorsFrame extends JDialog {
 
             try {
                 Major major = new Major(0, majorName, totalYears);
-                if (majorsRepository.Add(major)) {
-                    majorsTableModel.addMajor(major);
-                    majorField.setText("");
-                    yearsSpinner.setValue(1);
-                } else {
-                    JOptionPane.showMessageDialog(null, "Failed to add major to database", "Error", JOptionPane.ERROR_MESSAGE);
-                }
+                majorsTableModel.addMajor(major);
+                majorField.setText("");
+                yearsSpinner.setValue(1);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -72,12 +68,7 @@ public class MajorsFrame extends JDialog {
 
             if (majorsTable.getSelectedRow() >= 0) {
                 int modelRow = majorsTable.convertRowIndexToModel(selectedRow);
-                Major majorToRemove = majorsRepository.All().get(modelRow);
-                if (majorsRepository.Delete(majorToRemove.getId())) {
-                    majorsTableModel.removeMajor(modelRow);
-                } else {
-                    JOptionPane.showMessageDialog(null, "Failed to remove major from database", "Error", JOptionPane.ERROR_MESSAGE);
-                }
+                majorsTableModel.removeMajor(modelRow);
             }
         });
 

@@ -104,8 +104,39 @@ public class GradesTableModel extends AbstractTableModel {
     public void insertSubject(int row, Grade grade) {
         // SQL ADD
         try {
-            gradesRepository.Add(grade);
-            refreshGrades();
+            // Check if a grade already exists for this subject
+            var existingGrades = gradesRepository.AllByStudentId(student.getId());
+            var existingGrade = existingGrades.stream()
+                .filter(g -> g.getSubjectId() == grade.getSubjectId())
+                .findFirst();
+
+            if (existingGrade.isPresent()) {
+                // Ask user if they want to update the existing grade
+                int response = JOptionPane.showConfirmDialog(
+                    null,
+                    "A grade for this subject already exists. Do you want to update it?",
+                    "Update Existing Grade",
+                    JOptionPane.YES_NO_OPTION
+                );
+
+                if (response == JOptionPane.YES_OPTION) {
+                    // Update the existing grade
+                    var gradeToUpdate = existingGrade.get();
+                    gradeToUpdate.setGrade(grade.getGrade());
+                    if (gradesRepository.Update(gradeToUpdate)) {
+                        refreshGrades();
+                    } else {
+                        throw new Exception("Failed to update grade in database");
+                    }
+                }
+            } else {
+                // Add new grade
+                if (gradesRepository.Add(grade)) {
+                    refreshGrades();
+                } else {
+                    throw new Exception("Failed to add grade to database");
+                }
+            }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }

@@ -64,8 +64,7 @@ public class GradesFrame extends JDialog {
 
             try {
                 Grade grade = new Grade(0, subject.getId(), student.getId(), selectedGrade);
-                gradesRepository.Add(grade);
-                gradesTableModel.refreshGrades();
+                gradesTableModel.addGrade(grade);
 
                 subjectComboBox.setSelectedItem(null);
                 gradeBtnGroup.clearSelection();
